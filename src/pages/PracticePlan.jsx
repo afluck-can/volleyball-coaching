@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from 'react'
 import MiniCourt from '../components/CourtEditor/MiniCourt'
+import practicePlans from '../data/practicePlans'
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
@@ -297,6 +298,110 @@ function buildPdfHtml(header, sections) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+const LEVEL_COLORS = {
+  Beginner:     'bg-green-100 text-green-800 border-green-300',
+  Intermediate: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  Advanced:     'bg-red-100 text-red-800 border-red-300',
+}
+
+function TemplateModal({ onLoad, onClose }) {
+  const [selected, setSelected] = useState(null)
+
+  const loadTemplate = () => {
+    if (!selected) return
+    const plan = practicePlans.find(p => p.id === selected)
+    if (!plan) return
+    onLoad(plan)
+    onClose()
+  }
+
+  const preview = practicePlans.find(p => p.id === selected)
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">Load a Practice Plan Template</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Plan list */}
+          <div className="w-64 shrink-0 border-r border-gray-200 overflow-y-auto p-3 space-y-2">
+            {practicePlans.map(plan => (
+              <button
+                key={plan.id}
+                onClick={() => setSelected(plan.id)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                  selected === plan.id
+                    ? 'bg-blue-700 text-white border-blue-700'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <p className="font-semibold text-sm leading-tight">{plan.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${selected === plan.id ? 'bg-white/20 text-white border-white/40' : LEVEL_COLORS[plan.level]}`}>
+                    {plan.level}
+                  </span>
+                  <span className={`text-xs ${selected === plan.id ? 'text-blue-200' : 'text-gray-400'}`}>{plan.duration} min</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Preview */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {preview ? (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">{preview.name}</h3>
+                <div className="flex gap-3 mb-3">
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${LEVEL_COLORS[preview.level]}`}>{preview.level}</span>
+                  <span className="text-xs text-gray-500">{preview.duration} min · {preview.players} players</span>
+                </div>
+                <p className="text-sm text-gray-600 mb-1"><span className="font-semibold">Theme:</span> {preview.theme}</p>
+                <p className="text-sm text-gray-600 mb-4"><span className="font-semibold">Outcomes:</span> {preview.outcomes}</p>
+                <div className="space-y-3">
+                  {preview.sections.map((sec, i) => (
+                    <div key={i}>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">{sec.name}</p>
+                      <div className="space-y-1 pl-3 border-l-2 border-gray-200">
+                        {sec.drills.map((d, j) => (
+                          <div key={j} className="flex items-baseline gap-2">
+                            <span className="text-xs text-gray-400 shrink-0">{d.duration}m</span>
+                            <span className="text-sm text-gray-700">{d.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                Select a template to preview
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+          <p className="text-xs text-gray-400">Loading a template will replace your current plan.</p>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+            <button
+              onClick={loadTemplate}
+              disabled={!selected}
+              className="px-5 py-2 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-40 transition-colors"
+            >
+              Load Template
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PracticePlan() {
   const [header, setHeader] = useState({
     date: '', time: '', location: '', practiceNumber: '', phase: '', theme: '', outcomes: '',
@@ -304,8 +409,33 @@ export default function PracticePlan() {
 
   const [sections, setSections] = useState(SECTIONS.map(emptySection))
   const [exporting, setExporting] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
 
   const updateHeader = e => setHeader(h => ({ ...h, [e.target.name]: e.target.value }))
+
+  const loadTemplate = (plan) => {
+    setHeader({
+      date: '', time: '', location: '', practiceNumber: '',
+      phase: plan.phase || '',
+      theme: plan.theme || '',
+      outcomes: plan.outcomes || '',
+    })
+    setSections(plan.sections.map(sec => ({
+      id: Date.now() + Math.random(),
+      name: sec.name,
+      drills: sec.drills.map(d => ({
+        ...emptyDrill(),
+        id: Date.now() + Math.random(),
+        code: d.code || '',
+        name: d.name || '',
+        duration: d.duration || 10,
+        objective: d.objective || '',
+        successCriteria: d.successCriteria || '',
+        referencePoints: d.referencePoints || '',
+        variations: d.variations || '',
+      })),
+    })))
+  }
 
   // Section operations
   const addSection = () => setSections(s => [...s, emptySection('New Section')])
@@ -368,6 +498,7 @@ export default function PracticePlan() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showTemplates && <TemplateModal onLoad={loadTemplate} onClose={() => setShowTemplates(false)} />}
       <div className="max-w-5xl mx-auto px-4 py-10">
 
         {/* Page header */}
@@ -376,19 +507,27 @@ export default function PracticePlan() {
             <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Practice Plan Builder</h1>
             <p className="text-gray-500">Build your session section by section, add court diagrams per drill, then export to PDF.</p>
           </div>
-          <div className="text-right">
+          <div className="flex flex-col items-end gap-2">
             {totalMins > 0 && (
-              <p className="text-sm text-gray-500 mb-2">
+              <p className="text-sm text-gray-500">
                 Total: <span className="font-bold text-gray-800">{totalMins} min</span>
               </p>
             )}
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-60"
-            >
-              {exporting ? 'Exporting…' : 'Export to PDF'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowTemplates(true)}
+                className="border border-blue-600 text-blue-700 font-semibold px-4 py-2.5 rounded-lg hover:bg-blue-50 transition-colors text-sm"
+              >
+                Load Template
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-60 text-sm"
+              >
+                {exporting ? 'Exporting…' : 'Export to PDF'}
+              </button>
+            </div>
           </div>
         </div>
 
