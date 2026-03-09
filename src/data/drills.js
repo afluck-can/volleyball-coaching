@@ -772,4 +772,17 @@ const drills = [
   }
 ]
 
-export default drills
+// minPlayers lookup — merged at export so individual drill objects stay clean
+const minPlayersMap = {
+  'set-001':2,'set-002':3,'set-003':3,'set-004':2,'set-005':2,'set-006':2,'set-007':4,
+  'dig-001':3,'dig-002':2,'dig-003':4,'dig-004':6,'dig-005':2,'dig-006':2,'dig-007':8,
+  'pass-001':2,'pass-002':2,'pass-003':5,'pass-004':2,'pass-005':3,'pass-006':4,'pass-007':5,
+  'serve-001':1,'serve-002':2,'serve-003':2,'serve-004':1,'serve-005':1,'serve-006':3,'serve-007':12,
+  'hit-001':4,'hit-002':2,'hit-003':5,'hit-004':6,'hit-005':1,'hit-006':4,'hit-007':4,
+  'block-001':2,'block-002':3,'block-003':5,'block-004':3,'block-005':8,'block-006':2,'block-007':12,
+}
+
+export default drills.map(cat => ({
+  ...cat,
+  drills: cat.drills.map(d => ({ ...d, minPlayers: minPlayersMap[d.id] ?? 1 })),
+}))

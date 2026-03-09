@@ -6,6 +6,7 @@ export default function Navbar() {
   const links = [
     { to: '/', label: 'Home' },
     { to: '/drills', label: 'Drill Library' },
+    { to: '/rotations', label: 'Rotations' },
     { to: '/practice-plan', label: 'Practice Plan' },
   ]
 
