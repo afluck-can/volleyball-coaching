@@ -1,0 +1,15 @@
+{
+  "name": "my-project",
+  "mode": "vendored",
+  "dependencies": {
+    "elevenlabs/skills": {
+      "version": "5d2d627abcb93a3e690795b1b0bf623fcc1aaef4",
+      "source": "https://github.com/elevenlabs/skills",
+      "include": {
+        "skills": [
+          "speech-to-text"
+        ]
+      }
+    }
+  }
+}
